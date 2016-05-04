@@ -1,0 +1,97 @@
+(page "index.html"
+  (:refer-hoplon :exclude [elem section])
+  (:require
+    [hoplon.ui     :refer [elem image window]]
+    [markdown.core :refer [md->html]]))
+
+(def url "http://data.computablelaw.org/events.json")
+
+;;; model ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defc db {})
+
+(.getJSON js/jQuery url #(swap! db assoc :events (js->clj % :keywordize-keys true)))
+
+;;; queries ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defc= events (-> db :events))
+(defc= route  (-> db :route))
+(defc= state  (-> route ffirst))
+(defc= qargs  (-> route second))
+(defc= event  (get events (:id qargs)))
+
+;;; commands ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defn change-route [db route]
+  (assoc db :route route))
+
+(defn change-state [db path & [query]]
+  (change-route db [path query]))
+
+(defn initiate [db route status _]
+  (change-route db (if (empty? route) [[:events]] route)))
+
+;;; view ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; styles
+(def g 30) ;; gutter
+
+(def blue  0x638fc3)
+(def white 0xFFFFFF)
+
+(def font-grey 0x555)
+
+;; breakpoints
+(def sm 736)
+(def lg 1069)
+
+(defelem title-text [attrs elems]
+  (elem :w "100%" :font-size 24 elems))
+
+(defelem subtitle-text [attrs elems]
+  (elem :w "100%" :mt 8 :font-style :italic elems))
+
+(defelem body-text [attrs elems]
+  (elem :w "100%" :mt 10 elems))
+
+(defelem container [attrs elems]
+  (elem :w ["100%" sm "80%"] :h "100%" :pt g :pb (* g 2) :g g attrs elems))
+
+(defelem section [{c :color :as attrs} elems]
+  (elem :w "100%" :ah :center :color c
+    (container
+      (dissoc attrs :color) elems)))
+
+(defelem event-view [attrs _]
+  (section :h 800
+    (title-text    (cell= (:title event)))
+    (subtitle-text (cell= (apply str (interpose " " (:speakers event)))))
+    (body-text     (cell= (:description event)))))
+
+(defelem events-view [_ _]
+  (elem :w "100%"
+    (section
+      (elem :font-size 36 "Schedule"))
+    (loop-tpl :bindings [[idx {:keys [title speakers description start-time stop-time]}] (cell= (map-indexed vector events))]
+      (section :color (cell= (if (even? idx) 0xEEE 0xFFF)) :cursor :pointer :click #(swap! db change-state [:event] {:id @idx})
+        (elem :w 140 :ah :right
+          (body-text (cell= (.toLocaleTimeString (js/Date. start-time))))
+          (body-text (cell= (.toLocaleTimeString (js/Date. stop-time)))))
+        (elem :w '(- "100%" 140)
+          (title-text    title)
+          (subtitle-text (cell= (apply str (interpose " " speakers))))
+          (body-text     (cell= (when description (subs description 0 100)))))))))
+
+(window
+  :title        "The Global Legal Technology Lab Event"
+  :route        route
+  :initiated    (partial swap! db initiate)
+  :routechanged (partial swap! db change-route)
+  (section :color :black :font-color white
+    (image :url "mit-ml-logo.jpg")
+    (elem :pt 60 :font-size 28 "The Global Legal Technology Lab Event"))
+  (case-tpl state
+    :event  (event-view)
+    :events (events-view))
+  (section :ah :center :color blue :font-color white
+    (elem "The Global Legal Techology Laboratory")))
