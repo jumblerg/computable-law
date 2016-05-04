@@ -4,11 +4,21 @@
     [hoplon.ui     :refer [elem image window]]
     [markdown.core :refer [md->html]]))
 
+;;; constants ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (def url "http://data.computablelaw.org/events.json")
+
+;;; utils ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defn ->time [str]
+  (.toLocaleTimeString (js/Date. str) (.-language js/navigator) #js{:hour "2-digit" :minute "2-digit"}))
+
 
 ;;; model ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defc db {})
+
+;;; service ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (.getJSON js/jQuery url #(swap! db assoc :events (js->clj % :keywordize-keys true)))
 
@@ -46,16 +56,16 @@
 (def lg 1069)
 
 (defelem title-text [attrs elems]
-  (elem :w "100%" :font-size 24 elems))
+  (elem :w "100%" :font-size 24 attrs elems))
 
 (defelem subtitle-text [attrs elems]
-  (elem :w "100%" :mt 8 :font-style :italic elems))
+  (elem :w "100%" :mt 8 :font-style :italic attrs elems))
 
 (defelem body-text [attrs elems]
-  (elem :w "100%" :mt 10 elems))
+  (elem :w "100%" :mt 10 attrs elems))
 
 (defelem container [attrs elems]
-  (elem :w ["100%" sm "80%"] :h "100%" :pt g :pb (* g 2) :g g attrs elems))
+  (elem :w ["100%" sm "70%"] :h "100%" :pt g :pb (* g 2) :g g attrs elems))
 
 (defelem section [{c :color :as attrs} elems]
   (elem :w "100%" :ah :center :color c
@@ -74,22 +84,22 @@
       (elem :font-size 36 "Schedule"))
     (loop-tpl :bindings [[idx {:keys [title speakers description start-time stop-time]}] (cell= (map-indexed vector events))]
       (section :color (cell= (if (even? idx) 0xEEE 0xFFF)) :cursor :pointer :click #(swap! db change-state [:event] {:id @idx})
-        (elem :w 140 :ah :right
-          (body-text (cell= (.toLocaleTimeString (js/Date. start-time))))
-          (body-text (cell= (.toLocaleTimeString (js/Date. stop-time)))))
-        (elem :w '(- "100%" 140)
+        (elem :w 100
+          (body-text :ah :right (cell= (->time start-time)))
+          (body-text :ah :right (cell= (->time stop-time))))
+        (elem :w '(- "100%" 100)
           (title-text    title)
           (subtitle-text (cell= (apply str (interpose " " speakers))))
           (body-text     (cell= (when description (subs description 0 100)))))))))
 
 (window
-  :title        "The Global Legal Technology Lab Event"
+  :title        "The Global Legal Technology Laboratory"
   :route        route
   :initiated    (partial swap! db initiate)
   :routechanged (partial swap! db change-route)
   (section :color :black :font-color white
     (image :url "mit-ml-logo.jpg")
-    (elem :pt 60 :font-size 28 "The Global Legal Technology Lab Event"))
+    (elem :ah :right :pt 80 :font-size 28 "The Global Legal Technology Lab Event"))
   (case-tpl state
     :event  (event-view)
     :events (events-view))
