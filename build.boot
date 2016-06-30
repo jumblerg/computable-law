@@ -33,5 +33,5 @@
     (comp (watch) (speak) (hoplon) (reload) (cljs :optimizations o) (serve :port p))))
 
 (task-options!
-  develop  {:port 4000}
-  target   {:dir "tgt"})
+  develop {:port 4000}
+  target  {:dir  #{"tgt"}})
