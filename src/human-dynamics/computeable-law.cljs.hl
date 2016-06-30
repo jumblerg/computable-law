@@ -195,7 +195,7 @@
   :ff helvetica :fr :optimizeLegibility :fm :antialiased
   (when-tpl (b :w menu-open lg true)
     (elem :w 240 :h (r 1 1) :pv 40 :gv 30 :xl (b :w menu-open lg false) :ah :center :c black :click #(reset! menu-open false)
-      (image :h 129 :m :pointer :url "mit-ml-logo.jpg" :click #(do (reset! menu-open false) (swap! db change-state [:home])))
+      (image :h 129 :m :pointer :url "mit-ml-logo.jpg" :click #(do (reset! menu-open false) (swap! db change-state [:conference])))
       (elem :w (r 1 1) :h (- (r 1 1) 234) :gv 46 :bc grey-300
         (sidebar-menu-button :view :conference "conference")
         (sidebar-menu-button :view :events     "schedule")
