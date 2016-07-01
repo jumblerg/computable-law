@@ -194,14 +194,14 @@
   :ff helvetica :fr :optimizeLegibility :fm :antialiased
   (when-tpl (b :w menu-open lg true)
     (elem :w 240 :h (r 1 1) :pv 40 :gv 30 :xl (b :w menu-open lg false) :ah :center :c black :click #(reset! menu-open false)
-      (image :h 129 :m :pointer :url "mit-ml-logo.jpg" :click #(do (reset! menu-open false) (swap! db change-state [:conference])))
-      (elem :w (r 1 1) :h (- (r 1 1) 234) :gv 46 :bc grey-300
+      (image :h 130 :m :pointer :url "mit-ml-logo.jpg" :click #(do (reset! menu-open false) (swap! db change-state [:conference])))
+      (elem :w (r 1 1) :h (- (r 1 1) (+ 130 84)) :gv 46 :bc grey-300
         (for-tpl [[key {:keys [title]}] views]
           (elem :w (r 1 1) :ph 40 :pv 4 :av :middle :bl 3 :bcl (cell= (if (= key state) white black)) :f 18 :ff helvetica :fc white :m :pointer :click #(do (reset! menu-open false) (swap! db change-state [@key]))
             (elem :pt 2
               title))))
-      (elem :w (r 1 1) :h 64 :p 36 :ff helvetica :fc white
-        (image :w 130 :url "creative-commons-logo.png" :m :pointer :click #(.open js/window "https://creativecommons.org/")))))
+      (elem :w (r 1 1) :ph 36 :ff helvetica :fc white
+        (image :w 130 :h 54 :url "creative-commons-logo.png" :m :pointer :click #(.open js/window "https://creativecommons.org/")))))
   (elem :w (b :w (r 1 1) lg (- (r 1 1) 240)) :h (r 1 1) :sv :auto
     (elem :w (r 1 1) :h 64 :ph pad-lg :pv pad-sm :g pad-sm :av :middle :bb 0.5 :bc (c 0 0 0 0.15)
       (icon :click #(swap! menu-open not) :fc black "menu")
