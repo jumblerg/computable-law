@@ -1,6 +1,6 @@
 (page "index.html"
   (:refer-clojure
-    :exclude [-])
+    :exclude [- name])
   (:refer-hoplon
     :exclude [elem rt title input form b s section])
   (:require
@@ -37,17 +37,19 @@
 
 ;;; query ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defc= route      (->  db :route))
-(defc= state      (->  route ffirst))
-(defc= qargs      (->  route second))
-(defc= title      (when state (capitalize (name state))))
-(defc= view-title (str organization " " title))
-
-(defc= views      (-> db :views))
-(defc= events     (-> views :events :items))
-(defc= event      (get events (:id qargs)))
-(defc= photos     (-> views :photos :items))
-(defc= photo      (get photos (:id qargs)))
+(defc= route    (-> db :route))
+(defc= views    (-> db :views))
+(defc= state    (-> route ffirst))
+(defc= qargs    (-> route second))
+(defc= name     (-> views (get state) :name))
+(defc= title    (-> views (get state) :title))
+(defc= events   (-> views :events :items))
+(defc= event    (get events (:id qargs)))
+(defc= photos   (-> views :photos :items))
+(defc= photo    (get photos (:id qargs)))
+(defc= projects (-> views :projects :items))
+(defc= project  (get projects (:id qargs)))
+(defc= videos   (-> views :videos :items))
 
 ;;; command ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -79,29 +81,30 @@
 (def font-black (c 0x333333))
 
 ; fonts
-(def helvetica ["HelveticaNeue-Bold" "Lucida Grande" :sans-serif])
+(def helvetica ["Helvetica Neue" "Lucida Grande" :sans-serif])
 
 ; text
-(defelem section-title [attrs elems]
-  (elem :w (r 1 1) :f 42 :ff helvetica :fx :uppercase
+(defelem view-title [attrs elems]
+  (elem :w (r 1 1) :f 38 :ff helvetica :fx :uppercase :ft :500
     attrs elems))
 
-(defelem title-text [attrs elems]
-  (elem :w (r 1 1) :f 24 attrs elems))
+(defelem view-subtitle [attrs elems]
+  (elem :w (r 1 1) :pt 10 :fi :italic attrs elems))
 
-(defelem subtitle-text [attrs elems]
-  (elem :w (r 1 1) :pt 8 :fi :italic attrs elems))
-
-(defelem body-text [attrs elems]
+(defelem view-body [attrs elems]
   (elem :w (r 1 1) attrs elems))
 
-(defelem container [attrs elems]
-  (elem :w (b :w (r 1 1) sm (r 7 10)) :h (r 1 1) :pt pad-sm :pb (* pad-sm 2) :g pad-sm attrs elems))
+(defelem section-title [attrs elems]
+  (elem :w (r 1 1) :f 23
+    attrs elems))
 
-(defelem section [{c :color :as attrs} elems]
-  (elem :w (r 1 1) :ah :center :c c
-    (container
-      (dissoc attrs :color) elems)))
+(defelem section-subtitle [attrs elems]
+  (elem :w (r 1 1) :pb 12 :fi :italic
+    attrs elems))
+
+(defelem section-body [attrs elems]
+  (elem :w (r 1 1)
+     attrs elems))
 
 ;;; components ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -131,74 +134,93 @@
     (elem :w (r 1 1) :h (- (r 1 1) 26) :f 30
      elems)))
 
-;;; components ;;;
-
 ;;; view  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defn home-view []
   (elem :w (r 1 1) :h (- (r 1 1) 64) :p 42 :g 42
-    (section-title view-title)))
+    (view-title title)))
 
 (defelem event-view [attrs _]
-  (section :h 800
-    (title-text    (cell= (:title event)))
-    (subtitle-text (cell= (apply str (interpose " " (:speakers event)))))
-    (body-text     (cell= (:description event)))))
+  (elem :w (r 1 1) :h (- (r 1 1) 64) :p 42 :g 42
+    (view-title    (cell= (:title event)))
+    (view-subtitle (cell= (apply str (interpose " " (:speakers event)))))
+    (view-body     (cell= (:description event)))))
 
 (defelem events-view [_ _]
   (elem :w (r 1 1) :h (- (r 1 1) 64) :p 42 :g 42
-    (section-title :w (r 1 1) view-title)
+    (view-title :w (r 1 1) title)
     (for-tpl [[idx {:keys [title speakers description start-time stop-time]}] (cell= (map-indexed vector events))]
       (elem :gh 64
-        (elem :w 76 :gv 16 :bl 2 :bc (c 0 0 0 0.25) :ah :right
+        (elem :w 76 :pv 4 :gv 16 :bl 2 :bc (c 0 0 0 0.25) :ah :right
           (elem (cell= (->time start-time)))
           (elem (cell= (->time stop-time))))
         (elem :w (- (r 1 1) 150) :m :pointer :click #(swap! db change-state [:event] {:id @idx})
-          (elem :w (r 1 1) :f 23
+          (section-title
              title)
-          (elem :w (r 1 1) :pb 12 :fi :italic
+          (section-subtitle
              (cell= (apply str (interpose " " speakers))))
-          (elem :w (r 1 1) :ft :100
+          (section-body
              (cell= (when description (subs description 0 100)))))))))
 
+(defelem project-view [attrs _]
+  (elem :w (r 1 1) :h (- (r 1 1) 64) :p 42 :g 24
+    (view-title    (cell= (:title    project)))
+    (view-subtitle (cell= (:focus    project)))
+    (view-subtitle (cell= (:status   project)))
+    (view-body     (cell= (:summary  project)))
+    (view-body     (cell= (:goals    project)))
+    (view-body     (cell= (:outcomes project)))
+    (view-body     (cell= (apply str (interpose "\n" (:partners  project)))))
+    (view-body     (cell= (apply str (interpose "\n" (:resources project)))))))
+
 (defn projects-view []
-  (elem :w (r 1 1) :h (- (r 1 1) 64) :p 42 :g 42
-    (section-title view-title)))
+  (elem :w (r 1 1) :h (- (r 1 1) 64) :p 42 :g 24
+    (view-title title)
+    (for-tpl [[idx {:keys [title focus status]}] (cell= (map-indexed vector projects))]
+      (elem :w (r 1 1) :m :pointer :click #(swap! db change-state [:project] {:id @idx})
+        (section-title    title)
+        (section-subtitle :pl 4 (cell= (str focus " - " status)))))))
 
 (defn organizers-view []
   (elem :w (r 1 1) :h (- (r 1 1) 64) :p 42 :g 42
-    (section-title view-title)))
+    (view-title title)))
+
+(defn videos-view []
+  (elem :w (r 1 1) :h (- (r 1 1) 64) :p 42 :g 42
+    (view-title title)
+    #_(for-tpl [[idx {:keys [video]}] (cell= (map-indexed vector videos))]
+        (video :w (b :w (r 1 1) sm (r 1 2) md (r 1 3) lg (r 1 4)) :d (d 0 1 (c 0 0 0 0.37) 4) :m :pointer :url (cell= (str resource-url video))))))
 
 (defelem photo-view [attrs _]
   (elem :w (r 1 1) :h (r 1 1) :p 40 :ah :center :av :middle
-    (title-text       (cell= (:title photo)))
-    #_(subtitle-text    (cell= (:description photo)))
+    (view-title       (cell= (:title photo)))
+    #_(view-subtitle    (cell= (:description photo)))
     (image :w (r 1 1) :d (d 0 1 (c 0 0 0 0.37) 4) :url (cell= (str resource-url (:image photo))) :click #(swap! db change-state [:photos]))))
 
 (defn photos-view []
   (elem :w (r 1 1) :h (- (r 1 1) 64) :p 42 :g 42
-    (section-title view-title)
+    (view-title title)
     (for-tpl [[idx {:keys [thumb]}] (cell= (map-indexed vector photos))]
       (image :w (b :w (r 1 1) sm (r 1 2) md (r 1 3) lg (r 1 4)) :d (d 0 1 (c 0 0 0 0.37) 4) :m :pointer :click #(swap! db change-state [:photo] {:id @idx}) :url (cell= (str resource-url thumb))))))
 
 (defn notes-view []
   (elem :w (r 1 1) :h (- (r 1 1) 64) :p 42 :g 42
-    (section-title view-title)))
+    (view-title title)))
 
 (window
-  :title        (cell= (str organization " - " title))
+  :title        (cell= (str organization " - " name))
   :route        route
   :styles       [icon-url font-url]
   :initiated    (partial swap! db initiate)
   :routechanged (partial swap! db change-route)
   :ff helvetica :fr :optimizeLegibility :fm :antialiased
   (when-tpl (b :w menu-open lg true)
-    (elem :w 240 :h (r 1 1) :pv 40 :gv 30 :xl (b :w menu-open lg false) :ah :center :c black :click #(reset! menu-open false)
+    (elem :w 240 :h (r 1 1) :pv 40 :gv 30 :xl (b :w menu-open lg false) :ah :center :c black :click #(reset! menu-open false) :o 0.3
       (image :h 130 :m :pointer :url "mit-ml-logo.jpg" :click #(do (reset! menu-open false) (swap! db change-state [:conference])))
       (elem :w (r 1 1) :h (- (r 1 1) (+ 130 84)) :gv 46 :bc grey-300
         (for-tpl [[key {:keys [title]}] views]
-          (elem :w (r 1 1) :ph 40 :pv 4 :av :middle :bl 3 :bcl (cell= (if (= key state) white black)) :f 18 :ff helvetica :fc white :m :pointer :click #(do (reset! menu-open false) (swap! db change-state [@key]))
-            (elem :pt 2
+          (elem :w (r 1 1) :ph 40 :pv 4 :av :middle :bl 3 :bcl (cell= (if (= key state) white black)) :f 18 :ff helvetica :ft :800 :fc white :m :pointer :click #(do (reset! menu-open false) (swap! db change-state [@key]))
+            (elem :pt 2 :fx :lowercase
               title))))
       (elem :w (r 1 1) :ph 36 :ff helvetica :fc white
         (image :w 130 :h 54 :url "creative-commons-logo.png" :m :pointer :click #(.open js/window "https://creativecommons.org/")))))
@@ -211,9 +233,11 @@
       :conference (home-view)
       :event      (event-view)
       :events     (events-view)
+      :project    (project-view)
       :projects   (projects-view)
       :organizers (organizers-view)
       :photo      (photo-view)
       :photos     (photos-view)
+      :videos     (videos-view)
       :notes      (notes-view)))
   (elem :xl 240 :xr 0 :w (r 1 1) :h (r 1 1) :c (c 0 0 0 0.5) :v (b :w menu-open lg false) :click #(reset! menu-open false)))
