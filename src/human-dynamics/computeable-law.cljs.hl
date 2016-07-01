@@ -216,7 +216,7 @@
   :ff helvetica :fr :optimizeLegibility :fm :antialiased
   (when-tpl (b :w menu-open lg true)
     (elem :w 240 :h (r 1 1) :pv 40 :gv 30 :xl (b :w menu-open lg false) :ah :center :c black :click #(reset! menu-open false) :o 0.3
-      (image :h 130 :m :pointer :url "mit-ml-logo.jpg" :click #(do (reset! menu-open false) (swap! db change-state [:conference])))
+      (image :h 130 :m :pointer :url "mit-ml-logo.jpg" :click #(do (reset! menu-open false) (swap! db change-state [:projects])))
       (elem :w (r 1 1) :h (- (r 1 1) (+ 130 84)) :gv 46 :bc grey-300
         (for-tpl [[key {:keys [title]}] views]
           (elem :w (r 1 1) :ph 40 :pv 4 :av :middle :bl 3 :bcl (cell= (if (= key state) white black)) :f 18 :ff helvetica :ft :800 :fc white :m :pointer :click #(do (reset! menu-open false) (swap! db change-state [@key]))
