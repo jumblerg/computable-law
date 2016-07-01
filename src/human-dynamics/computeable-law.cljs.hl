@@ -12,6 +12,15 @@
   (:require-macros
     [hoplon.ui :refer [button form window]]))
 
+;;; constants ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(def organization "Legal Technology Laboratory")
+
+(def content-url  "http://data.computablelaw.org/content.edn")
+(def resource-url "http://data.computablelaw.org/resources/")
+(def icon-url     "https://fonts.googleapis.com/icon?family=Material+Icons")
+(def font-url     "https://fonts.googleapis.com/css?family=RobotoDraft:400,500,700,400italic")
+
 ;;; utils ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defn ->time [str]
@@ -19,32 +28,26 @@
 
 ;;; state ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(def organization "Legal Technology Laboratory")
-
-(def events-url "http://data.computablelaw.org/events.json")
-(def icon-url   "https://fonts.googleapis.com/icon?family=Material+Icons")
-(def font-url   "https://fonts.googleapis.com/css?family=RobotoDraft:400,500,700,400italic")
-
 (defc db {})
-
 (defc menu-open false)
 
 ;;; service ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(.getJSON js/jQuery events-url #(swap! db assoc :events (js->clj % :keywordize-keys true)))
+(.get js/jQuery content-url #(swap! db assoc :views (cljs.reader/read-string %)))
 
 ;;; query ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defc= route  (->  db :route))
-(defc= state  (->  route ffirst))
-(defc= qargs  (->  route second))
-(defc= title  (when state (capitalize (name state))))
-(defc= page-title (str organization " " title))
+(defc= route      (->  db :route))
+(defc= state      (->  route ffirst))
+(defc= qargs      (->  route second))
+(defc= title      (when state (capitalize (name state))))
+(defc= view-title (str organization " " title))
 
-(defc= events (-> db :events))
-(defc= event  (get events (:id qargs)))
-
-#_(cell= (prn :route route))
+(defc= views      (-> db :views))
+(defc= events     (-> views :events :items))
+(defc= event      (get events (:id qargs)))
+(defc= photos     (-> views :photos :items))
+(defc= photo      (get photos (:id qargs)))
 
 ;;; command ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -112,17 +115,6 @@
       (for-tpl [elem elems]
          (elem :w (r 1 n))))))
 
-(defelem footer-menu-button [{v :view :as attrs} elems]
-  (elem :m :pointer :ff helvetica :fc font-black :fu (cell= (if (= v state) :underline :none)) :click #(swap! db change-state v)
-    (dissoc attrs :view)
-    elems))
-
-(defelem sidebar-menu-button [{v :view i :icon :as attrs} elems]
-  (elem :w (r 1 1) :ph 40 :pv 4 :av :middle :bl 3 :bcl (cell= (if (= v state) white black)) :f 18 :ff helvetica :fc white :m :pointer :click #(do (reset! menu-open false) (swap! db change-state [v]))
-    (dissoc attrs :view :icon)
-    (icon :f 24 i)
-    (elem :pt 2 elems)))
-
 (defelem card [{:keys [title url] :as attrs} elems]
   (elem :bc grey-300 (dissoc attrs :title :url) :d (d 0 1 (c 0 0 0 0.37) 4)
     (image :url url)
@@ -141,11 +133,11 @@
 
 ;;; components ;;;
 
-;;; views ;;;
+;;; view  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defn home-view []
   (elem :w (r 1 1) :h (- (r 1 1) 64) :p 42 :g 42
-    (section-title page-title)))
+    (section-title view-title)))
 
 (defelem event-view [attrs _]
   (section :h 800
@@ -155,8 +147,8 @@
 
 (defelem events-view [_ _]
   (elem :w (r 1 1) :h (- (r 1 1) 64) :p 42 :g 42
-    (section-title :w (r 1 1) page-title)
-    (loop-tpl :bindings [[idx {:keys [title speakers description start-time stop-time]}] (cell= (map-indexed vector events))]
+    (section-title :w (r 1 1) view-title)
+    (for-tpl [[idx {:keys [title speakers description start-time stop-time]}] (cell= (map-indexed vector events))]
       (elem :gh 64
         (elem :w 76 :gv 16 :bl 2 :bc (c 0 0 0 0.25) :ah :right
           (elem (cell= (->time start-time)))
@@ -171,51 +163,57 @@
 
 (defn projects-view []
   (elem :w (r 1 1) :h (- (r 1 1) 64) :p 42 :g 42
-    (section-title page-title)
-    #_(button :w 400 :h 200 :c (s :up :red :down :green :over :purple))))
+    (section-title view-title)))
 
 (defn organizers-view []
   (elem :w (r 1 1) :h (- (r 1 1) 64) :p 42 :g 42
-    (section-title page-title)))
+    (section-title view-title)))
 
-(defn media-view []
+(defelem photo-view [attrs _]
+  (elem :w (r 1 1) :h (r 1 1) :p 40 :ah :center :av :middle
+    (title-text       (cell= (:title photo)))
+    #_(subtitle-text    (cell= (:description photo)))
+    (image :w (r 1 1) :d (d 0 1 (c 0 0 0 0.37) 4) :url (cell= (str resource-url (:image photo))) :click #(swap! db change-state [:photos]))))
+
+(defn photos-view []
   (elem :w (r 1 1) :h (- (r 1 1) 64) :p 42 :g 42
-    (section-title page-title)))
+    (section-title view-title)
+    (for-tpl [[idx {:keys [thumb]}] (cell= (map-indexed vector photos))]
+      (image :w (b :w (r 1 1) sm (r 1 2) md (r 1 3) lg (r 1 4)) :d (d 0 1 (c 0 0 0 0.37) 4) :m :pointer :click #(swap! db change-state [:photo] {:id @idx}) :url (cell= (str resource-url thumb))))))
 
 (defn notes-view []
   (elem :w (r 1 1) :h (- (r 1 1) 64) :p 42 :g 42
-    (section-title page-title)))
+    (section-title view-title)))
 
 (window
   :title        (cell= (str organization " - " title))
   :route        route
   :styles       [icon-url font-url]
-  :initiated    #(swap! db initiate %)
-  :routechanged #(swap! db change-state (ffirst %))
+  :initiated    (partial swap! db initiate)
+  :routechanged (partial swap! db change-route)
   :ff helvetica :fr :optimizeLegibility :fm :antialiased
   (when-tpl (b :w menu-open lg true)
     (elem :w 240 :h (r 1 1) :pv 40 :gv 30 :xl (b :w menu-open lg false) :ah :center :c black :click #(reset! menu-open false)
       (image :h 129 :m :pointer :url "mit-ml-logo.jpg" :click #(do (reset! menu-open false) (swap! db change-state [:conference])))
       (elem :w (r 1 1) :h (- (r 1 1) 234) :gv 46 :bc grey-300
-        (sidebar-menu-button :view :conference "conference")
-        (sidebar-menu-button :view :events     "schedule")
-        (sidebar-menu-button :view :projects   "projects")
-        (sidebar-menu-button :view :organizers "organizers")
-        (sidebar-menu-button :view :media      "media")
-        (sidebar-menu-button :view :notes      "notes"))
+        (for-tpl [[key {:keys [title]}] views]
+          (elem :w (r 1 1) :ph 40 :pv 4 :av :middle :bl 3 :bcl (cell= (if (= key state) white black)) :f 18 :ff helvetica :fc white :m :pointer :click #(do (reset! menu-open false) (swap! db change-state [@key]))
+            (elem :pt 2
+              title))))
       (elem :w (r 1 1) :h 64 :p 36 :ff helvetica :fc white
-        ; (footer-menu-button)
         (image :w 130 :url "creative-commons-logo.png" :m :pointer :click #(.open js/window "https://creativecommons.org/")))))
   (elem :w (b :w (r 1 1) lg (- (r 1 1) 240)) :h (r 1 1) :sv :auto
     (elem :w (r 1 1) :h 64 :ph pad-lg :pv pad-sm :g pad-sm :av :middle :bb 0.5 :bc (c 0 0 0 0.15)
       (icon :click #(swap! menu-open not) :fc black "menu")
       (elem :w (- (r 1 1) 24 pad-sm) :g pad-sm :ah :right :av :middle
-        (image :w 130 :url "kauffman-logo.png" :m :pointer :click #(.open js/window "http://www.kauffman.org/")) #_(icon "search")))
+        (image :w 130 :url "kauffman-logo.png" :m :pointer :click #(.open js/window "http://www.kauffman.org/"))))
     (case-tpl state
-      :conference   (home-view)
-      :events       (events-view)
-      :projects     (projects-view)
-      :organizers   (organizers-view)
-      :media        (media-view)
-      :notes        (notes-view)))
+      :conference (home-view)
+      :event      (event-view)
+      :events     (events-view)
+      :projects   (projects-view)
+      :organizers (organizers-view)
+      :photo      (photo-view)
+      :photos     (photos-view)
+      :notes      (notes-view)))
   (elem :xl 240 :xr 0 :w (r 1 1) :h (r 1 1) :c (c 0 0 0 0.5) :v (b :w menu-open lg false) :click #(reset! menu-open false)))
