@@ -60,7 +60,7 @@
   (change-route db [path query]))
 
 (defn initiate [db route status _]
-  (change-route db (if (empty? route) [[:conference]] route)))
+  (change-route db (if (empty? route) [[:projects]] route)))
 
 ;;; view ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
