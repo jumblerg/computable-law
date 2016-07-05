@@ -6,9 +6,9 @@
                   [adzerk/boot-cljs          "1.7.228-1"      :scope "test"]
                   [adzerk/boot-reload        "0.4.11"         :scope "test"]
                   [adzerk/bootlaces          "0.1.13"         :scope "test"]
-                  [hoplon/boot-hoplon        "0.1.13"         :scope "test"]
+                  [hoplon/boot-hoplon        "0.2.0"          :scope "test"]
                   [tailrecursion/boot-static "0.0.1-SNAPSHOT" :scope "test"]
-                  [hoplon/material           "0.0.1-SNAPSHOT"]
+                  [hoplon/ui                 "0.0.1-SNAPSHOT"]
                   [markdown-clj              "0.9.89"]])
 
 (require
